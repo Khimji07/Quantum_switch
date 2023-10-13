@@ -1,0 +1,11 @@
+#!/bin/sh
+
+while true; do
+    # Execute your command here
+    socat - unix-connect:/var/run/roscmd.sock
+
+    # Check the exit status of the command
+    if [ $? -eq 0 ]; then
+        socat - unix-connect:/var/run/roscmd.sock
+    fi       
+done
