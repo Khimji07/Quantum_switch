@@ -1,0 +1,51 @@
+#!/bin/sh
+
+. /etc/runit/functions
+
+PIDFILE="/var/run/tunnel.pid"
+CLOUD_STATE=$(jq '.wizard.miyagi_cloud_conn' /mnt/flash/sw-config.json)
+
+while [ -f "$PIDFILE" ]; do
+	PID=$(cat "$PIDFILE")
+	if [ -d "/proc/$PID" ];then
+		sleep 5
+	else 
+		rm -rf $PIDFILE
+	fi 
+done
+
+msg 'starting Tunnel...'
+
+MYPID=$$
+
+echo "$MYPID" > "$PIDFILE"
+
+RUNNING=true
+
+while [ "$RUNNING" = "true" ]; do
+	CLOUD_STAT=$(jq '.wizard.miyagi_cloud_conn' /mnt/flash/sw-config.json)
+	if [ "$CLOUD_STAT" = "true" ]; then
+		sleep 3
+		mkdir -p /root/.ssh
+		cp -rf /mnt/flash/external/ssh/authorized_keys /root/.ssh/
+		INSIDE_RUNNING=true
+		sleep 10
+		while [ "$INSIDE_RUNNING" = "true" ]; do
+			ping -c 1 -W 5 google.com > /dev/null
+			PING_EXIT_STATUS=$?
+			EXPECTED_EXIT_STATUS=0
+			if [ "$PING_EXIT_STATUS" -eq "$EXPECTED_EXIT_STATUS" ]; then
+				TUNNEL_PORT=$(cat /mnt/flash/external/persistent/stand_tunnel_port)
+				exec tunnel "$TUNNEL_PORT" &
+				echo "=> Tunnel established on Port $TUNNEL_PORT"
+				msg 'Tunnel Successfully Established'
+				sleep 5
+				TUNNEL_PID=$(ps | grep "ssh" | grep "switch-control" | awk '{print $1}')
+				echo "$TUNNEL_PID" > "$PIDFILE"
+				RUNNING=false
+				INSIDE_RUNNING=false
+			fi
+		done
+	fi
+	sleep 60
+done
