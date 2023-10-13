@@ -1,0 +1,32 @@
+#!/bin/sh
+
+REGISTRY_FILE="/mnt/flash/system/.registry"
+FILE1="/tmp/logA"
+FILE2="/tmp/logB"
+FILE3="/tmp/extra"
+SR_NO=$(grep '0x1004' "$REGISTRY_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d ' .<>*\\/\t')
+
+qnos_get_v2 show logging 2&>1 > "$FILE1"
+
+generate_json() {
+  JSONDATA=$(jq --null-input \
+    --arg sr_no "$SR_NO" \
+    --arg data "$1" \
+    '{"sr_no": $sr_no, "data": $data}')
+
+  echo "$JSONDATA"
+}
+
+FIRST_LOGS=$(cat "$FILE1")
+FIST_DATA=$(generate_json "$FIRST_LOGS")
+pub_arm "$FIST_DATA"
+
+while true; do
+    sleep 30
+    qnos_get_v2 show logging 2&>1 > "$FILE2"
+    live_logs 2&>1 > "$FILE3"
+    LOGS=$(cat "$FILE3")
+    MYDATA=$(generate_json "$LOGS")
+    pub_arm "$MYDATA"
+    cp "$FILE2" "$FILE1"
+done
