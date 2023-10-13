@@ -1,0 +1,39 @@
+#!/bin/sh
+
+qnosg show lldp ne 2&>1 > /tmp/lldp
+start_line=12
+current_line=0
+json_array=""
+
+# Read the table from the file and process it line by line
+while IFS= read -r line; do
+	current_line=$((current_line + 1))
+	if [ $current_line -lt $start_line ]; then
+		continue
+	fi
+	
+	if ! echo "$line" | grep -q "Interface"; then
+		Port=$(echo "$line" | awk '{print $1}')
+		Device_ID=$(echo "$line" | awk '{print $2}')
+		Port_ID=$(echo "$line" | awk '{print $3}')
+		System_Name=$(echo "$line" | awk '{print $4}')
+		Capabilities=$(echo "$line" | awk '{print $5, $6}')
+
+		if [ "$System_Name" = "B" ] || [ "$System_Name" = "R" ]; then
+            Capabilities="$System_Name"
+            System_Name=""
+        fi
+		
+		if [ -n "$line" ] ; then
+			json_object=$(jq -n --arg Port "$Port" --arg Device_ID "$Device_ID" --arg Port_ID "$Port_ID" --arg System_Name "$System_Name" --arg Capabilities "$Capabilities" '{Port: $Port, Device_ID: $Device_ID, Port_ID: $Port_ID, System_Name: $System_Name, Capabilities: $Capabilities}')
+			json_array="$json_array$json_object,"
+		fi
+	fi
+done < /tmp/lldp	
+
+# Join the array elements with commas to form a JSON array
+json_array="${json_array%,}"
+json_output="[$json_array]"
+echo "$json_output"
+rm -rf /tmp/lldp  
+

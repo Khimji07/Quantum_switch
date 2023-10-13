@@ -1,0 +1,60 @@
+#!/bin/sh
+
+qnosg show int s 2>&1 > /tmp/all_int_s
+qnosg show int con 2>&1 > /tmp/all_int_conf
+all_int_conf=/tmp/all_int_conf
+start_line=7
+current_line=0
+json_array=""
+# Read the table from the file and process it line by line
+while IFS= read -r line; do
+    current_line=$((current_line + 1))
+    if [ "$current_line" -lt "$start_line" ]; then
+        continue
+    fi
+    # Skip the header line
+    if ! echo "$line" | grep -q "^Port"; then
+
+        if echo "$line" | grep -qE "^(Ch|oob)"; then
+            break
+        fi
+        # Split the line into columns using whitespace as delimiter
+        port=$(echo "$line" | awk '{print $1}')
+        type=$(echo "$line" | awk '{print $2}')
+        duplex=$(echo "$line" | awk '{print $3}')
+        speed=$(echo "$line" | awk '{print $4}')
+        neg=$(echo "$line" | awk '{print $5}')
+        control=$(echo "$line" | awk '{print $6}')
+        state=$(echo "$line" | awk '{print $7}')
+        pressure=$(echo "$line" | awk '{print $8}')
+        mode=$(echo "$line" | awk '{print $9}')
+
+        add_admin_state=$(sed -n "${current_line}p" "$all_int_conf")
+        admin_state=$(echo "$add_admin_state" | awk '{print $7}')
+
+        if [ -z "$port" ]; then
+            continue
+        fi
+
+        # Create a JSON object for each row and append it to the array
+        json_array="${json_array}{
+            \"Port\": \"$port\",
+            \"Type\": \"$type\",
+            \"Duplex\": \"$duplex\",
+            \"Speed\": \"$speed\",
+            \"Neg\": \"$neg\",
+            \"Flow ctrl\": \"$control\",
+            \"Link State\": \"$state\",
+            \"Back Pressure\": \"$pressure\",
+            \"Midx Mode\": \"$mode\"
+            \"Admin State\": \"$admin_state\"
+        },"
+    fi
+done < /tmp/all_int_s
+
+# Join the array elements with commas to form a JSON array
+json_output="[$json_array{}]"
+echo "$json_output"
+rm -rf /tmp/all_int_s
+rm -rf /tmp/all_int_conf
+

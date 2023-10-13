@@ -1,0 +1,65 @@
+#!/bin/sh
+
+qnosg show int count 2>&1 > /tmp/rx-tx
+start_line=7
+current_line=0
+rx_end_line=35
+tx_start_line=38
+tx_end_line=66
+json_array_rx=""
+json_array_tx=""
+
+# Read the table from the file and process it line by line
+while IFS= read -r line; do
+    current_line=$((current_line + 1))
+    if [ "$current_line" -lt "$start_line" ]; then
+        continue
+    fi
+    # Skip the header line
+    if ! echo "$line" | grep -q "^Port"; then
+        if echo "$line" | grep -qE "^(Ch|oob)"; then
+            break
+        fi
+        if [ "$current_line" -lt "$rx_end_line" ]; then
+            # Split the line into columns using whitespace as delimiter
+            Port=$(echo "$line" | awk '{print $1}')
+            InUcastPkts=$(echo "$line" | awk '{print $2}')
+            InMcastPkts=$(echo "$line" | awk '{print $3}')
+            InBcastPkts=$(echo "$line" | awk '{print $4}')
+            InOctets=$(echo "$line" | awk '{print $5}')
+            json_array_rx="${json_array_rx}{
+                \"Port\": \"$Port\",
+                \"RX_Unicast_Pkts\": \"$InUcastPkts\",
+                \"RX_Multicast_Pkts\": \"$InMcastPkts\",
+                \"RX_Broadcast_Pkts\": \"$InBcastPkts\",
+                \"Total_RX\": \"$InOctets\"
+            },"
+        elif [ "$current_line" -ge "$tx_start_line" ] && [ "$current_line" -lt "$tx_end_line" ]; then
+            Port=$(echo "$line" | awk '{print $1}')
+            OutUcastPkts=$(echo "$line" | awk '{print $2}')
+            OutMcastPkts=$(echo "$line" | awk '{print $3}')
+            OutBcastPkts=$(echo "$line" | awk '{print $4}')
+            OutOctets=$(echo "$line" | awk '{print $5}')
+            json_array_tx="${json_array_tx}{
+                \"Port\": \"$Port\",
+                \"TX_Unicast_Pkts\": \"$OutUcastPkts\",
+                \"TX_Multicast_Pkts\": \"$OutMcastPkts\",
+                \"TX_Broadcast_Pkts\": \"$OutBcastPkts\",
+                \"Total_TX\": \"$OutOctets\"
+            },"
+        else
+            continue 
+        fi
+    fi
+done < rx-tx
+
+# Remove trailing commas from both arrays
+json_array_rx=$(echo "$json_array_rx" | sed 's/,$//')
+json_array_tx=$(echo "$json_array_tx" | sed 's/,$//')
+
+# Join the array elements with commas to form a single JSON array
+json_output="[$json_array_rx $json_array_tx]"
+
+echo "$json_output"
+# echo "$current_line"
+rm -rf /tmp/rx-tx

@@ -1,0 +1,58 @@
+#!/bin/sh
+
+qnosg show power inline 2&>1 > /tmp/power
+start_line=22
+current_line=0
+json_array=""
+
+# Read the table from the file and process it line by line
+while IFS= read -r line; do
+    current_line=$((current_line + 1))
+    if [ $current_line -lt $start_line ]; then
+        continue
+    fi
+
+    # Skip the header line
+    if ! echo "$line" | grep -q "Interface"; then
+
+        # Uncomment the following lines if you need the equivalent behavior
+        # if echo "$line" | grep -qE "^(Ch|oob)"; then
+        #     break;
+        # fi
+
+        # Split the line into columns using whitespace as delimiter
+        Interface=$(echo "$line" | awk '{print $1}')
+        Admin=$(echo "$line" | awk '{print $2}')
+        Oper=$(echo "$line" | awk '{print $3}')
+        Power=$(echo "$line" | awk '{print $4}')
+        Class=$(echo "$line" | awk '{print $5}')
+        Device=$(echo "$line" | awk '{print $6}')
+        Priority=$(echo "$line" | awk '{print $7}')
+
+        # Priority is high low critical
+        if [ "$Device" = "high" ] || [ "$Device" = "low" ] || [ "$Device" = "critical" ]; then
+            Priority="$Device"
+            Device=""
+        fi
+
+        if [ -z "$Interface" ]; then
+            continue
+        fi
+
+        # Create a JSON object for each row and append it to the array
+        json_array="$json_array{
+            \"Interface\": \"$Interface\",
+            \"Admin\": \"$Admin\",
+            \"Oper\": \"$Oper\",
+            \"Power\": \"$Power\",
+            \"Class\": \"$Class\",
+            \"Device\": \"$Device\",
+            \"Priority\": \"$Priority\"
+        },"
+    fi
+done < power
+
+# Join the array elements with commas to form a JSON array
+json_output="[${json_array%,}{}]"
+echo "$json_output"
+rm -rf /tmp/power
