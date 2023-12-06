@@ -1,0 +1,32 @@
+#!/bin/sh
+
+qnosg show run 2>&1 > /tmp/startup-config
+
+DATA=$(cat /tmp/startup-config)
+
+FILTER_DATA=$(echo "$DATA" | awk '/^username/ && $7 == 15 {print $2, $5}')
+
+# Initialize an empty string for the JSON
+JSON_DATA="{\"stand_cred\":["
+
+# Initialize a flag for comma
+add_comma=""
+
+# Loop through the input data and create JSON objects
+while read -r username password rest; do
+  JSON_DATA="$JSON_DATA$add_comma{\"username\":\"$username\",\"password\":\"$password\"}"
+  add_comma=","
+done <<EOF
+$FILTER_DATA
+EOF
+
+JSON_DATA="$JSON_DATA]}"
+
+# Output the formatted JSON
+# echo "$JSON_DATA"
+
+BASE64_DATA=$(echo "$JSON_DATA" | base64)
+
+echo "$BASE64_DATA" > /mnt/flash/external/persistent/stand_cred.txt
+
+rm -rf /tmp/startup-config
