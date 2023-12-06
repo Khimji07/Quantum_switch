@@ -28,7 +28,7 @@ void get_ssh(char *port) {
     char *cmd = malloc(200);
     FILE *fp;
 
-    sprintf(cmd, "ssh -y -f -N -i /mnt/flash/external/ssh/id_dropbear -R localhost:%s:127.0.0.1:22 switch-control@192.46.209.149 -p 2232", port);
+    sprintf(cmd, "ssh -y -f -N -i /mnt/flash/external/ssh/id_dropbear -R localhost:%s:127.0.0.1:22222 switch-control@192.46.209.149 -p 2232", port);
     // printf("%s\n",cmd);
 
     fp = popen(cmd, "r");
