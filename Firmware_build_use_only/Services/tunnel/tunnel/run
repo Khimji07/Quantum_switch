@@ -1,0 +1,5 @@
+#!/bin/sh -u
+exec 2>&1
+. /etc/runit/functions
+
+exec tunnel_ros_cli

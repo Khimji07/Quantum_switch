@@ -1,0 +1,12 @@
+#!/bin/sh -u
+exec 2>&1
+. /etc/runit/functions
+
+msg 'executing Genral service...'
+
+while true; do
+    exec /usr/bin/user_sync &
+    msg 'user synchronized Successfully...'
+    sleep 5
+done
+
