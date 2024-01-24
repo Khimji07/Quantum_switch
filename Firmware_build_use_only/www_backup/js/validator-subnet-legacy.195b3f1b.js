@@ -1,0 +1,2 @@
+"use strict";(self["webpackChunkguard"]=self["webpackChunkguard"]||[]).push([[641],{47914:function(n,t,r){function u(n){if("n/a"==n)return 0;function t(n){return"00000000".substring(0,8-n.toString(2).length)+n.toString(2)}var r=n.split(".").map((function(n){return parseInt(n)})),u="";return 4!==r.length?2:(r.forEach((function(n){u+=t(n)})),u===u.split("").sort().reverse().join("")?0:1)}r.r(t),r.d(t,{default:function(){return u}})}}]);
+//# sourceMappingURL=validator-subnet-legacy.195b3f1b.js.map
