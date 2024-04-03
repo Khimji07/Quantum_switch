@@ -1,8 +1,15 @@
 #!/bin/sh
 
+# Wait for ping
+IP="203.0.113.121"
+while ! ping -c 1 -W 1 "$IP" >/dev/null; do
+    sleep 5
+done
+
+
+# Initializations
 . /etc/runit/functions
 logfile="/var/log/genral/current"
-IP="203.0.113.121"
 HOSTNAME=$(snmpwalk -v2c -c public $IP SNMPv2-MIB::sysName.0 | awk '{gsub(/"/,""); print $4}')
 REGISTRY_FILE="/mnt/flash/system/.registry"
 MAC=$(grep '0x1005' "$REGISTRY_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d ' .<>*\\/\t' | awk -F':' '{print $4":"$5":"$6}')
@@ -25,7 +32,7 @@ while [ "$RUNNING" = "true" ]; do
             exit
         fi
     else
-        sleep 5
+        sleep 10
     fi
 
 done
