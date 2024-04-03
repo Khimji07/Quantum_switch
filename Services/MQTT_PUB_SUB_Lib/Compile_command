@@ -1,0 +1,1 @@
+arm-marvell-linux-gnueabi-gcc -o sub_arm subscriber.c mqtt.c mqtt_pal.c -lpthread

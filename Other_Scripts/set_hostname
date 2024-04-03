@@ -12,8 +12,8 @@ done
 logfile="/var/log/genral/current"
 HOSTNAME=$(snmpwalk -v2c -c public $IP SNMPv2-MIB::sysName.0 | awk '{gsub(/"/,""); print $4}')
 REGISTRY_FILE="/mnt/flash/system/.registry"
-MAC=$(grep '0x1005' "$REGISTRY_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d ' .<>*\\/\t' | awk -F':' '{print $4":"$5":"$6}')
-PAYLOAD="{\"method\":\"call\",\"params\":{\"uid\":\"snmp_set\",\"arg\":{\"oid\":[{\"name\":\"SNMPv2-MIB::sysName.0\",\"type\":\"STRING\",\"value\":\"QN_${MAC}\"}]}},\"id\":1}"
+MAC=$(grep '0x1005' "$REGISTRY_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d ' .<>*\\/\t' | awk -F':' '{print $4 $5 $6}')
+PAYLOAD="{\"method\":\"call\",\"params\":{\"uid\":\"snmp_set\",\"arg\":{\"oid\":[{\"name\":\"SNMPv2-MIB::sysName.0\",\"type\":\"STRING\",\"value\":\"QN-${MAC}\"}]}},\"id\":1}"
 RUNNING=true
 
 while [ "$RUNNING" = "true" ]; do
