@@ -4,9 +4,10 @@ exec 2>&1
 
 msg 'executing Genral service...'
 
+exec /usr/bin/set_hostname &
+
 while true; do
     exec /usr/bin/user_sync &
-    msg 'user synchronized Successfully...'
     sleep 5
 done
 
