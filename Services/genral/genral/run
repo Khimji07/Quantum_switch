@@ -2,7 +2,12 @@
 exec 2>&1
 . /etc/runit/functions
 
-msg 'executing Genral service...'
+msg 'executing General service...'
+
+IP="203.0.113.121"
+while ! ping -c 1 -W 1 "$IP" >/dev/null; do
+    sleep 2
+done
 
 exec /usr/bin/set_hostname &
 
