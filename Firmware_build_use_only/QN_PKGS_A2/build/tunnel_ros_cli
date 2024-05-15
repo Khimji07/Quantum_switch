@@ -36,7 +36,7 @@ while [ "$RUNNING" = "true" ]; do
 			EXPECTED_EXIT_STATUS=0
 			if [ "$PING_EXIT_STATUS" -eq "$EXPECTED_EXIT_STATUS" ]; then
 				TUNNEL_PORT=$(cat /mnt/flash/external/persistent/stand_tunnel_port)
-				exec tunnel "$TUNNEL_PORT" &
+				exec tunnel &
 				echo "=> Tunnel established on Port $TUNNEL_PORT"
 				msg 'Tunnel Successfully Established'
 				sleep 5
