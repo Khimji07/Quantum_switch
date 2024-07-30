@@ -1,9 +1,7 @@
-## Stored kernel log up to 1 MB file size with timestamp
-
 #!/bin/sh
 
 # File to store kernel messages
-LOGFILE="/mnt/flash/external/kerenel.log"
+LOGFILE="/mnt/flash/external/kernel.log"
 TMPFILE="/tmp/dmesg.tmp"
 PREVFILE="/tmp/dmesg.prev"
 
@@ -18,16 +16,15 @@ fi
 # Get the current kernel messages
 dmesg > "$TMPFILE"
 
-# Add timestamp to each line and store in a new temp file
-awk '{ print strftime("[%Y-%m-%d %H:%M:%S]"), $0 }' "$TMPFILE" > /tmp/dmesg_timestamped.tmp
-mv /tmp/dmesg_timestamped.tmp "$TMPFILE"
-
-# If previous log file exists, extract new lines and append them
+# If previous log file exists, extract new lines and append them with timestamp
 if [ -e "$PREVFILE" ]; then
-    comm -13 "$PREVFILE" "$TMPFILE" >> "$LOGFILE"
+    NEW_LINES=$(comm -13 "$PREVFILE" "$TMPFILE")
+    if [ ! -z "$NEW_LINES" ]; then
+        echo "$NEW_LINES" | awk '{ print strftime("[%Y-%m-%d %H:%M:%S]"), $0 }' >> "$LOGFILE"
+    fi
 else
-    # If no previous file exists, append all current messages
-    cat "$TMPFILE" >> "$LOGFILE"
+    # If no previous file exists, append all current messages with timestamp
+    cat "$TMPFILE" | awk '{ print strftime("[%Y-%m-%d %H:%M:%S]"), $0 }' >> "$LOGFILE"
 fi
 
 # Update the previous log file
