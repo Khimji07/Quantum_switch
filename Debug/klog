@@ -1,0 +1,42 @@
+## Stored kernel log up to 1 MB file size with timestamp
+
+#!/bin/sh
+
+# File to store kernel messages
+LOGFILE="/mnt/flash/external/kerenel.log"
+TMPFILE="/tmp/dmesg.tmp"
+PREVFILE="/tmp/dmesg.prev"
+
+# Maximum file size in bytes (1 MB)
+MAX_SIZE=$((1 * 1024 * 1024))
+
+# Ensure the log file exists
+if [ ! -e "$LOGFILE" ]; then
+    touch "$LOGFILE"
+fi
+
+# Get the current kernel messages
+dmesg > "$TMPFILE"
+
+# Add timestamp to each line and store in a new temp file
+awk '{ print strftime("[%Y-%m-%d %H:%M:%S]"), $0 }' "$TMPFILE" > /tmp/dmesg_timestamped.tmp
+mv /tmp/dmesg_timestamped.tmp "$TMPFILE"
+
+# If previous log file exists, extract new lines and append them
+if [ -e "$PREVFILE" ]; then
+    comm -13 "$PREVFILE" "$TMPFILE" >> "$LOGFILE"
+else
+    # If no previous file exists, append all current messages
+    cat "$TMPFILE" >> "$LOGFILE"
+fi
+
+# Update the previous log file
+cp "$TMPFILE" "$PREVFILE"
+
+# Trim the logfile if it exceeds MAX_SIZE
+LOG_SIZE=$(stat -c%s "$LOGFILE")
+
+if [ "$LOG_SIZE" -gt "$MAX_SIZE" ]; then
+    # Remove the oldest bytes to reduce the file size
+    tail -c "$MAX_SIZE" "$LOGFILE" > "$LOGFILE.tmp" && mv "$LOGFILE.tmp" "$LOGFILE"
+fi
