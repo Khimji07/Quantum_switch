@@ -15,20 +15,16 @@ if [ "$_THIRD_PRECIOUS_MODEL" = "225" ] || [ "$_THIRD_PRECIOUS_MODEL" = "230" ] 
     # echo "3 MB" > $PKT_BUFFER
     echo "3 MB"
 
-elif [ "$_THIRD_PRECIOUS_MODEL" = "335" ] || [ "$_THIRD_PRECIOUS_MODEL" = "330" ]; then
-    # echo "6 MB" > $PKT_BUFFER
-    echo "6 MB"
-
-elif [ "$_THIRD_PRECIOUS_MODEL" = "425" ] || [ "$_THIRD_PRECIOUS_MODEL" = "435" ] || [ "$_THIRD_PRECIOUS_MODEL" = "241GF" ]; then
-    # echo "8 MB" > $PKT_BUFFER
-    echo "8 MB"
+elif [ "$_THIRD_PRECIOUS_MODEL" = "325" ] || [ "$_THIRD_PRECIOUS_MODEL" = "330" ] || [ "$_THIRD_PRECIOUS_MODEL" = "425" ] || [ "$_THIRD_PRECIOUS_MODEL" = "430" ] || [ "$_THIRD_PRECIOUS_MODEL" = "241GF" ]; then
+    # echo "12 MB" > $PKT_BUFFER
+    echo "12 MB"
 
 elif [ "$_SECOND_PRECIOUS_MODEL" = "CS" ]; then
-    # echo "8 MB" > $PKT_BUFFER
+    # echo "24 MB" > $PKT_BUFFER
     echo "24 MB"
 
 elif [ "$_SECOND_PRECIOUS_MODEL" = "DS" ]; then
-    # echo "8 MB" > $PKT_BUFFER
-    echo "64 MB"
+    # echo "48   MB" > $PKT_BUFFER
+    echo "48 MB"
 
 fi
