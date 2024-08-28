@@ -30,7 +30,7 @@ if [[ "$file_first_three_lines" != *"$format_check"* ]]; then
     "*********   SWITCH SYSTEM INFORMATION   *********" \
     "*************************************************" \
     "" "" "" "" "" "" "" "" "" "" \
-    "*************************************************" >> /mnt/flash/system-info
+    "*************************************************" >> $FILE
 fi
 
 
@@ -58,14 +58,14 @@ else
 fi
 
 
-echo $MODEL_NUMBER
-echo $SERIAL_NUMBER
-echo $MAC_ADDRESS
-echo $FIRMWARE_VERSION
-echo $PACKET_BUFFER_MEMOMRY
-echo $RAM
-echo $FLASH
-echo $ADD_ON_LICENCE
+# echo $MODEL_NUMBER
+# echo $SERIAL_NUMBER
+# echo $MAC_ADDRESS
+# echo $FIRMWARE_VERSION
+# echo $PACKET_BUFFER_MEMOMRY
+# echo $RAM
+# echo $FLASH
+# echo $ADD_ON_LICENCE
 
 # Prepare the line to be added or replaced
 MODEL_NEW_LINE="Model Number : $MODEL_NUMBER"
