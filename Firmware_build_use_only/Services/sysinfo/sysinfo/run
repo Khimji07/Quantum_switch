@@ -1,0 +1,29 @@
+#!/bin/sh -u
+exec 2>&1
+. /etc/runit/functions
+
+msg 'executing Sysinfo service...'
+
+IP="203.0.113.121"
+while ! ping -c 1 -W 1 "$IP" >/dev/null; do
+    sleep 2
+done
+
+sleep 20
+
+/usr/bin/system-info &
+
+sleep 1
+
+while true; do
+    if [ -f /mnt/flash/system-info ]; then
+        # File exists, sleep for 30 seconds
+        sleep 30
+    else
+        # File does not exist, run /usr/bin/system-info and sleep for 30 seconds
+        /usr/bin/system-info
+        msg 'Updated Sysinfo service...'
+        sleep 30
+    fi
+done
+
