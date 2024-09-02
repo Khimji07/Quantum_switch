@@ -37,7 +37,8 @@ fi
 MODEL_NUMBER=$(rc_get_agent_model_hwrev)
 SERIAL_NUMBER=$(grep '0x1004' "$REGISTRY_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d ' .<>*\\/\t')
 MAC_ADDRESS=$(grep '0x1005' ${REGISTRY_FILE} 2>/dev/null | cut -d'=' -f2)
-FIRMWARE_VERSION=$(ls -la /mnt/flash/system/images | grep 'active-image' | awk '{print $NF}' | awk -F'QN_SW-IE-' '{print $2}' | awk -F'.bin' '{print $1}' | head -n 1)
+# FIRMWARE_VERSION=$(ls -la /mnt/flash/system/images | grep 'active-image' | awk '{print $NF}' | awk -F'QN_SW-IE-' '{print $2}' | awk -F'.bin' '{print $1}' | head -n 1)
+FIRMWARE_VERSION=$(cat /etc/fw_version)
 PACKET_BUFFER_MEMOMRY=$(cat /mnt/flash/external/persistent/pkt_buffer)
 # RAM="$(cat /mnt/flash/external/persistent/.ram) MB"
 # FLASH="$(cat /mnt/flash/external/persistent/.flash) MB"

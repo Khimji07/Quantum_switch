@@ -11,7 +11,7 @@ done
 
 sleep 20
 
-/usr/bin/system-info &
+/usr/bin/system-info
 
 sleep 1
 

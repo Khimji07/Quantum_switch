@@ -13,6 +13,7 @@ done
 i=1
 while [ "$i" -le 5 ]; do
     /usr/bin/set_hostname
+    /usr/bin/pkt_buffer
     i=$((i + 1))
     sleep 2  # Optional: Add a delay between iterations
 done

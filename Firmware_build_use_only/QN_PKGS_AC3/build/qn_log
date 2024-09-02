@@ -48,7 +48,7 @@ publish() {
     data="$1"
 
         while true; do
-            exec /usr/bin/publish "$data" &
+            # exec /usr/bin/publish "$data" &
             wait $!
             if [ $? -eq 0 ]; then
                 break
@@ -75,8 +75,8 @@ FIRST_LOGS=$(cat "$tempOUT")
 FIRST_DATA=$(generate_json "$FIRST_LOGS")
 reboot=$(generate_json "SWITCH REBOOTED")
 if [ "$(jq -r '.wizard.miyagi_cloud_conn' "$cloud_conn")" == "true" ]; then
-    publish "$reboot"
-    publish "$FIRST_DATA"
+    # publish "$reboot"
+    # publish "$FIRST_DATA"
     echo "[$(date "+%d-%b-%Y %H:%M:%S")] Initial Logs sent."
 fi
 
@@ -103,7 +103,7 @@ while true; do
         LOGS=$(cat "$newlogs")
         MYDATA=$(generate_json "$LOGS")
         if [ "$(jq -r '.wizard.miyagi_cloud_conn' "$cloud_conn")" == "true" ]; then
-            publish "$MYDATA"
+            # publish "$MYDATA"
             echo "[$(date "+%d-%b-%Y %H:%M:%S")] Updated Logs sent."
         fi
     fi
