@@ -1,0 +1,19 @@
+#!/bin/sh
+
+PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+set -o pipefail
+
+. /etc/runit/functions
+. /etc/rc.conf
+
+msg "Starting core services..."
+for f in /etc/runit/core-sv/*.sh; do
+	[ -r $f ] && . $f
+done
+
+# TODO: maybe try `wait` in inittab
+touch /var/tmp/.first_init
+
+mkdir -p /mnt/flash/external/persistent
+cp -rf /etc/QNTM_Serial  /mnt/flash/external
