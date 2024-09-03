@@ -16,9 +16,9 @@
 
 int sockfd;
 char buffer[1024];
-char *linesArray[500];
+char *linesArray[500] = {0}; // Initialize to NULL
 int lineCount = 0;
-char *filesArray[50];
+char *filesArray[50] = {0};  // Initialize to NULL
 int filecount = 0;
 
 typedef struct
@@ -27,24 +27,33 @@ typedef struct
   time_t timestamp;
 } FileEntry;
 
-FileEntry *fileEntries;
+FileEntry *fileEntries = NULL; // Initialize to NULL
 
 void free_memory()
 {
   int i;
   for (i = 0; i < lineCount; i++)
   {
-    free(linesArray[i]);
+    if (linesArray[i] != NULL)
+    {
+      free(linesArray[i]);
+      linesArray[i] = NULL;
+    }
   }
 
   for (i = 0; i < filecount; i++)
   {
-    free(filesArray[i]);
+    if (filesArray[i] != NULL)
+    {
+      free(filesArray[i]);
+      filesArray[i] = NULL;
+    }
   }
 
   if (fileEntries != NULL)
   {
     free(fileEntries);
+    fileEntries = NULL;
   }
 }
 
@@ -112,13 +121,24 @@ int get_files()
     if (stat(path, &fileStat) < 0)
     {
       perror("stat");
+      closedir(dir);
       return EXIT_FAILURE;
     }
 
     if (S_ISREG(fileStat.st_mode))
     {
-      fileEntries = realloc(fileEntries, (filecount + 1) * sizeof(FileEntry));
-      strcpy(fileEntries[filecount].name, entry->d_name);
+      // Reallocate memory for fileEntries
+      FileEntry *newEntries = realloc(fileEntries, (filecount + 1) * sizeof(FileEntry));
+      if (newEntries == NULL)
+      {
+        perror("realloc");
+        closedir(dir);
+        return EXIT_FAILURE;
+      }
+
+      fileEntries = newEntries;
+      strncpy(fileEntries[filecount].name, entry->d_name, sizeof(fileEntries[filecount].name) - 1);
+      fileEntries[filecount].name[sizeof(fileEntries[filecount].name) - 1] = '\0'; // Ensure null-termination
       fileEntries[filecount].timestamp = fileStat.st_mtime;
 
       filecount++;
@@ -127,15 +147,22 @@ int get_files()
 
   qsort(fileEntries, filecount, sizeof(FileEntry), compareFileEntries);
 
-  int i = 0;
-  char *file = malloc(50);
-  for (i = 0; i < filecount; i++)
+  // Ensure enough space for the file paths
+  for (int i = 0; i < filecount; i++)
   {
-    sprintf(file, "%s/%s", CMD_DIR, fileEntries[i].name);
-    filesArray[i] = strdup(file);
+    size_t path_length = strlen(CMD_DIR) + strlen(fileEntries[i].name) + 2;
+    char *file = malloc(path_length);
+    if (file == NULL)
+    {
+      perror("malloc");
+      closedir(dir);
+      return EXIT_FAILURE;
+    }
+
+    snprintf(file, path_length, "%s/%s", CMD_DIR, fileEntries[i].name);
+    filesArray[i] = file;
   }
 
-  free(file);
   closedir(dir);
 
   return EXIT_SUCCESS;
@@ -160,12 +187,31 @@ int read_file(char *filename)
     {
       continue;
     }
+
+    if (lineCount >= 500)
+    {
+      fprintf(stderr, "Exceeded maximum line storage capacity\n");
+      fclose(fp);
+      return EXIT_FAILURE;
+    }
+
     char *storedLine = strdup(line);
+    if (storedLine == NULL)
+    {
+      perror("strdup");
+      fclose(fp);
+      return EXIT_FAILURE;
+    }
+
     linesArray[lineCount] = storedLine;
     lineCount++;
   }
 
-  strcat(linesArray[lineCount - 1], "\n");
+  // Ensure that we have at least one line before accessing linesArray[lineCount - 1]
+  if (lineCount > 0)
+  {
+    strncat(linesArray[lineCount - 1], "\n", MAX_LINE_LENGTH - strlen(linesArray[lineCount - 1]) - 1);
+  }
 
   fclose(fp);
 
@@ -185,13 +231,13 @@ int connect_socket()
 
   memset(&server_address, 0, sizeof(server_address));
   server_address.sun_family = AF_UNIX;
-  strncpy(server_address.sun_path, SOCKET_PATH,
-          sizeof(server_address.sun_path) - 1);
+  strncpy(server_address.sun_path, SOCKET_PATH, sizeof(server_address.sun_path) - 1);
+  server_address.sun_path[sizeof(server_address.sun_path) - 1] = '\0'; // Ensure null-termination
 
-  if (connect(sockfd, (struct sockaddr *)&server_address,
-              sizeof(server_address)) == -1)
+  if (connect(sockfd, (struct sockaddr *)&server_address, sizeof(server_address)) == -1)
   {
     perror("connect");
+    close(sockfd);
     return EXIT_FAILURE;
   }
 
@@ -224,29 +270,27 @@ int login_shell()
 
 void send_commands()
 {
-  int i;
-  for (i = 0; i < lineCount; i++)
+  for (int i = 0; i < lineCount; i++)
   {
-    write(sockfd, linesArray[i], strlen(linesArray[i]));
-    sleep(1);
+    if (linesArray[i] != NULL)
+    {
+      write(sockfd, linesArray[i], strlen(linesArray[i]));
+      sleep(1);
+    }
   }
-
-  return;
 }
 
 int main()
 {
   while (1)
   {
-    int status = 0;
-    status = get_files();
+    int status = get_files();
     if (status)
     {
       goto wait;
     }
 
-    int i = 0;
-    for (i = 0; i < filecount; i++)
+    for (int i = 0; i < filecount; i++)
     {
       status = read_file(filesArray[i]);
       if (status)
@@ -254,6 +298,7 @@ int main()
         printf("Error reading command\n");
         goto error;
       }
+
       status = connect_socket();
       if (status)
       {
@@ -275,6 +320,7 @@ int main()
       if (sockfd != -1)
       {
         close(sockfd);
+        sockfd = -1; // Reset sockfd to avoid using a closed socket
       }
 
     error:
@@ -292,10 +338,12 @@ int main()
 
       remove(filesArray[i]);
     }
+
   wait:
     filecount = 0;
     free_memory(); // Free memory before waiting
     sleep(5);
   }
+
   return EXIT_SUCCESS;
 }
