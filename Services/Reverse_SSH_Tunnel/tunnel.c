@@ -8,7 +8,6 @@
 #include <curl/curl.h>
 #include <time.h>
 
-
 #define LOG_FILE "/var/log/tunnel/current"
 
 // Log a message to a file with a custom prefix
@@ -43,7 +42,7 @@ void log_only_message(const char *message)
     }
     else
     {
-        perror("Error opening log file");
+        perror("Error opening tunnel log file");
     }
 }
 
@@ -54,7 +53,7 @@ char *get_rudder_url(const char *json_filename)
     FILE *fp = fopen(json_filename, "r");
     if (fp == NULL)
     {
-        perror("Error opening file");
+        perror("Error opening sw-config.json file");
         return NULL;
     }
 
@@ -65,6 +64,13 @@ char *get_rudder_url(const char *json_filename)
 
     // Read the JSON file into a buffer
     char *json_buffer = (char *)malloc(file_size + 1);
+    if (json_buffer == NULL)
+    {
+        perror("Error allocating memory for JSON buffer");
+        fclose(fp);
+        return NULL;
+    }
+
     fread(json_buffer, 1, file_size, fp);
     json_buffer[file_size] = '\0';
     fclose(fp);
@@ -78,45 +84,42 @@ char *get_rudder_url(const char *json_filename)
         {
             fprintf(stderr, "Error before: %s\n", error_ptr);
         }
-        cJSON_Delete(root);
         free(json_buffer);
         return NULL;
     }
 
     // Extract the value of "rudder_url"
     cJSON *wizard = cJSON_GetObjectItemCaseSensitive(root, "wizard");
+    char *url = NULL;
     if (cJSON_IsObject(wizard))
     {
         cJSON *rudder_url = cJSON_GetObjectItemCaseSensitive(wizard, "rudder_url");
         if (cJSON_IsString(rudder_url) && (rudder_url->valuestring != NULL))
         {
-            char *url = strdup(rudder_url->valuestring); // Allocate memory for the URL
-            cJSON_Delete(root);
-            free(json_buffer);
-            return url; // Return the extracted URL
+            url = strdup(rudder_url->valuestring); // Allocate memory for the URL
         }
     }
 
     // Cleanup
     cJSON_Delete(root);
     free(json_buffer);
-    return NULL;
+    return url; // Return the extracted URL
 }
 
-// Generel function for read the file with it's permission
+// General function for reading the file with its permission
 int open_file(const char *fname, const char *op_type)
 {
     FILE *fp = fopen(fname, op_type);
     if (!fp)
     {
-        perror("Error opening file");
+        perror("Error opening id_dropbear file");
         return -1;
     }
     fclose(fp);
     return 0;
 }
 
-// Get the serial number form .registry file
+// Get the serial number from .registry file
 char *get_serial_number()
 {
     FILE *fp;
@@ -128,7 +131,7 @@ char *get_serial_number()
     fp = fopen("/mnt/flash/system/.registry", "r");
     if (fp == NULL)
     {
-        perror("Error opening file");
+        perror("Error opening .registry file");
         return NULL;
     }
 
@@ -162,6 +165,10 @@ char *key_get()
     if (!dir)
     {
         mkdir("/mnt/flash/external/ssh", 0755);
+    }
+    else
+    {
+        closedir(dir);
     }
 
     if (open_file("/mnt/flash/external/ssh/id_dropbear", "r") != 0)
@@ -240,6 +247,12 @@ char *send_request(const char *data, const char *url)
     CURL *curl;
     CURLcode res;
     char *response_buffer = NULL;
+    response_buffer = (char *)malloc(4096); // Adjust buffer size as needed
+
+    if (!response_buffer) {
+        fprintf(stderr, "Error allocating memory for response buffer\n");
+        return NULL;
+    }
 
     // Initialize libcurl
     curl_global_init(CURL_GLOBAL_ALL);
@@ -267,19 +280,6 @@ char *send_request(const char *data, const char *url)
         // Set the callback function to handle the response
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
 
-        // Set the debug callback function to print the request
-        // curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, debug_callback); // For Debuging the Curl request
-        // curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); // For enable verbos mode
-
-        // Create a buffer to store the response
-        response_buffer = (char *)malloc(4096); // Adjust buffer size as needed
-        if (!response_buffer)
-        {
-            fprintf(stderr, "Error allocating memory for response buffer\n");
-            return NULL;
-        }
-        memset(response_buffer, 0, 4096);
-
         // Set the buffer as the write target
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, response_buffer);
 
@@ -297,10 +297,21 @@ char *send_request(const char *data, const char *url)
             free(response_buffer);
             response_buffer = NULL;
         }
+        else
+        {
+            // Ensure the buffer is null-terminated
+            response_buffer[4095] = '\0'; // Ensuring the response buffer is null-terminated
+        }
 
         // Clean up
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
+    }
+    else
+    {
+        fprintf(stderr, "Error initializing curl\n");
+        free(response_buffer);
+        response_buffer = NULL;
     }
 
     // Cleanup libcurl
@@ -309,9 +320,14 @@ char *send_request(const char *data, const char *url)
     return response_buffer;
 }
 
-// Parse the API respoce and seprate the Data
+// Parse the API response and separate the data
 void parse_api_response(const char *response, char **key, char **port)
 {
+    if (!response || !key || !port) {
+        fprintf(stderr, "Invalid input to parse_api_response\n");
+        return;
+    }
+
     cJSON *root = cJSON_Parse(response);
     if (root == NULL)
     {
@@ -339,8 +355,13 @@ void parse_api_response(const char *response, char **key, char **port)
 }
 
 // Set the Cloud ssh key into switch
-void key_set(char *key)
+void key_set(const char *key)
 {
+    if (!key) {
+        fprintf(stderr, "Invalid key provided to key_set\n");
+        return;
+    }
+
     DIR *dir;
     FILE *fp;
 
@@ -349,10 +370,9 @@ void key_set(char *key)
     {
         if (mkdir("/mnt/flash/external/ssh", 0755) != 0)
         {
-            printf("Error creating directory in /mnt/flash/external/ssh\n");
+            fprintf(stderr, "Error creating directory in /mnt/flash/external/ssh\n");
             return;
         }
-        // printf("Directory created in /mnt/flash/external/ssh\n");
         log_only_message("Directory created in /mnt/flash/external/ssh\n");
     }
     else
@@ -363,7 +383,7 @@ void key_set(char *key)
     fp = fopen("/mnt/flash/external/ssh/authorized_keys", "a");
     if (!fp)
     {
-        printf("Error opening /mnt/flash/external/ssh/authorized_keys\n");
+        fprintf(stderr, "Error opening /mnt/flash/external/ssh/authorized_keys\n");
         return;
     }
 
@@ -375,10 +395,9 @@ void key_set(char *key)
     {
         if (mkdir("/root/.ssh", 0755) != 0)
         {
-            printf("Error creating directory in /root/.ssh\n");
+            fprintf(stderr, "Error creating directory in /root/.ssh\n");
             return;
         }
-        // printf("Directory created in /root/.ssh\n");
         log_only_message("Directory created in /root/.ssh");
     }
     else
@@ -389,27 +408,37 @@ void key_set(char *key)
     fp = fopen("/root/.ssh/authorized_keys", "w");
     if (!fp)
     {
-        printf("Error opening /root/.ssh/authorized_keys\n");
+        fprintf(stderr, "Error opening /root/.ssh/authorized_keys\n");
         return;
     }
 
     fputs(key, fp);
     fclose(fp);
-
 }
 
 // Establish the reverse tunnel switch to cloud
 void tunnel(const char *domain, const char *port)
 {
-    char *cmd = malloc(200);
+    if (!domain || !port) {
+        fprintf(stderr, "Invalid domain or port provided to tunnel\n");
+        return;
+    }
+
+    char *cmd = (char *)malloc(200);
+    if (!cmd) {
+        fprintf(stderr, "Error allocating memory for command\n");
+        return;
+    }
+
     FILE *fp;
 
-    sprintf(cmd, "ssh -y -f -N -i /mnt/flash/external/ssh/id_dropbear -R localhost:%s:127.0.0.1:22222 switch-control@%s -p 2232 >/dev/null 2>&1", port, domain);
+    snprintf(cmd, 200, "ssh -y -f -N -i /mnt/flash/external/ssh/id_dropbear -R localhost:%s:127.0.0.1:22222 switch-control@%s -p 2232 >/dev/null 2>&1", port, domain);
 
     fp = popen(cmd, "r");
     if (!fp)
     {
         perror("Error executing command");
+        free(cmd);
         return;
     }
 
@@ -420,10 +449,15 @@ void tunnel(const char *domain, const char *port)
 // Store the port value in a file
 void store_port(const char *port)
 {
+    if (!port) {
+        fprintf(stderr, "Invalid port provided to store_port\n");
+        return;
+    }
+
     FILE *fp = fopen("/mnt/flash/external/persistent/stand_tunnel_port", "w");
     if (fp == NULL)
     {
-        perror("Error opening file");
+        perror("Error opening  stand_tunnel_port file");
         return;
     }
 
@@ -431,23 +465,75 @@ void store_port(const char *port)
     fclose(fp);
 }
 
+
+int is_process_running() {
+    FILE *fp;
+    char buffer[128];
+    int found = 0;
+    char pid[16]; // Variable to store the PID
+    char log_msg[256]; // Buffer to hold the formatted log message
+
+    // Modified command to exclude grep itself from the search
+    fp = popen("ps -e | grep 'ssh' | grep 'switch-control' | grep -v grep", "r");
+
+    if (fp == NULL) {
+        printf("Failed to run command\n");
+        return 1;
+    }
+
+    // Read the output of the command
+    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+        // sscanf will extract the first token (which is the PID)
+        sscanf(buffer, "%s", pid);
+        found = 1; // Process found
+        break;
+    }
+
+    // Close the pipe
+    pclose(fp);
+
+    if (found) {
+        // Format the log message to include the PID
+        sprintf(log_msg, ": %s, exiting...", pid);
+        log_message("Tunnel already running on PID", log_msg); // Log with prefix and message
+    }
+
+    // Return whether the process was found or not
+    return found;
+}
 // Main function
 int main()
 {
+
+    if (is_process_running()) {
+        return 0; // Exit the program if process is found
+    }
+
     char *rudderurl = get_rudder_url("/mnt/flash/sw-config.json");
-    // printf("%s\n", rudderurl);
+    if (!rudderurl) {
+        fprintf(stderr, "Failed to get rudder URL\n");
+        return EXIT_FAILURE;
+    }
     log_message("Rudderurl :", rudderurl);
 
     char *serial_number = get_serial_number();
-    // printf("%s\n", serial_number);
+    if (!serial_number) {
+        fprintf(stderr, "Failed to get serial number\n");
+        free(rudderurl);
+        return EXIT_FAILURE;
+    }
     log_message("Serialnumber :", serial_number);
 
     char *switchsshkey = key_get();
-    // printf("%s\n", switchsshkey);
-    log_message("SwitchSSHkey :",switchsshkey);
+    if (!switchsshkey) {
+        fprintf(stderr, "Failed to get SSH key\n");
+        free(rudderurl);
+        free(serial_number);
+        return EXIT_FAILURE;
+    }
+    log_message("SwitchSSHkey :", switchsshkey);
 
     char data[1024];
-    // snprintf(data, sizeof(data), "{\"cloud_identity\": 6, \"serial_number\": \"%s\", \"device_type\": \"SWITCH\", \"ssh_key\": \"%s\"}", serial_number, switchsshkey);
     snprintf(data, sizeof(data), "{\"serial_number\": \"%s\", \"device_type\": \"SWITCH\", \"ssh_key\": \"%s\"}", serial_number, switchsshkey);
 
     const char *url_path = "/api/v4/sshkeygenerator";
@@ -455,46 +541,57 @@ int main()
     if (url == NULL)
     {
         fprintf(stderr, "Error allocating memory for URL\n");
-        return -1;
+        free(rudderurl);
+        free(serial_number);
+        free(switchsshkey);
+        return EXIT_FAILURE;
     }
 
     strcpy(url, rudderurl);
     strcat(url, url_path);
 
     char *response = send_request(data, url);
-    log_message("API_Response :",response);
+    if (!response) {
+        fprintf(stderr, "Failed to get response from server\n");
+        free(url);
+        free(rudderurl);
+        free(serial_number);
+        free(switchsshkey);
+        return EXIT_FAILURE;
+    }
+    log_message("API_Response :", response);
 
-    char *key = NULL;  // store the ssh key which we get in api response
-    char *port = NULL; // store the port which we get in api response
+    char *key = NULL;
+    char *port = NULL;
     parse_api_response(response, &key, &port);
 
-    log_message("Key :",key);
-    log_message("Port :",port);
+    if (key && port) {
+        log_message("Key :", key);
+        log_message("Port :", port);
 
-    // printf("Key: %s\n", key);
-    // printf("Port: %s\n", port);
+        store_port(port);
 
-    // Store the port value in a file
-    store_port(port);
+        char *domain = rudderurl;
+        size_t url_len = strlen(rudderurl);
+        if (url_len >= 8 && strncmp(rudderurl, "https://", 8) == 0)
+        {
+            domain = rudderurl + 8; // Move the pointer to the position after "https://"
+        }
 
-    char *domain = rudderurl;
-    size_t url_len = strlen(rudderurl);
-    if (url_len >= 8 && strncmp(rudderurl, "https://", 8) == 0)
-    {
-        domain = rudderurl + 8; // Move the pointer to the position after "https://"
+        key_set(key);
+        tunnel(domain, port);
+
+        free(key);
+        free(port);
+    } else {
+        fprintf(stderr, "Failed to parse API response\n");
     }
-    // printf("The domain name is %s\n", domain);
-
-    key_set(key);
-    tunnel(domain, port);
 
     free(url);
     free(rudderurl);
     free(serial_number);
     free(switchsshkey);
     free(response);
-    free(key);
-    free(port);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

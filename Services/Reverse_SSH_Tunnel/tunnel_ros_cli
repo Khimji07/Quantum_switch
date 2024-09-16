@@ -6,15 +6,20 @@ PIDFILE="/var/run/tunnel.pid"
 CLOUD_STATE=$(jq '.wizard.miyagi_cloud_conn' /mnt/flash/sw-config.json)
 
 while [ -f "$PIDFILE" ]; do
-	PID=$(cat "$PIDFILE")
-	if [ -d "/proc/$PID" ];then
-		sleep 5
-	else 
-		rm -rf $PIDFILE
-	fi 
+    PID=$(cat "$PIDFILE")
+    
+    # Check if PID is not empty and the directory /proc/$PID exists
+    if [ -n "$PID" ] && [ -d "/proc/$PID" ]; then
+        sleep 5
+    else
+        # Kill the process and suppress all output
+        kill $PID >/dev/null 2>&1
+        rm -f "$PIDFILE"
+    fi 
 done
 
-msg 'starting Tunnel...'
+
+msg 'Tunnel Initializing... '
 
 MYPID=$$
 
