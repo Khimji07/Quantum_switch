@@ -12,19 +12,19 @@ _THIRD_PRECIOUS_MODEL=$(echo "$MODEL_NUM" | awk -F '-' '{print $3}')
 #echo $_THIRD_PRECIOUS_MODEL
 
 if [ "$_THIRD_PRECIOUS_MODEL" = "225" ] || [ "$_THIRD_PRECIOUS_MODEL" = "230" ] || [ "$_SECOND_PRECIOUS_MODEL" = "IS" ]; then
-    echo "3 MB" > $PKT_BUFFER
+    echo "3" > $PKT_BUFFER
     # echo "3 MB"
 
 elif [ "$_THIRD_PRECIOUS_MODEL" = "325" ] || [ "$_THIRD_PRECIOUS_MODEL" = "330" ] || [ "$_THIRD_PRECIOUS_MODEL" = "425" ] || [ "$_THIRD_PRECIOUS_MODEL" = "430" ] || [ "$_THIRD_PRECIOUS_MODEL" = "241GF" ]; then
-    echo "12 MB" > $PKT_BUFFER
+    echo "12" > $PKT_BUFFER
     # echo "12 MB"
 
 elif [ "$_SECOND_PRECIOUS_MODEL" = "CS" ]; then
-    echo "24 MB" > $PKT_BUFFER
+    echo "24" > $PKT_BUFFER
     # echo "24 MB"
 
 elif [ "$_SECOND_PRECIOUS_MODEL" = "DS" ]; then
-    echo "48 MB" > $PKT_BUFFER
+    echo "48" > $PKT_BUFFER
     # echo "48 MB"
 
 fi

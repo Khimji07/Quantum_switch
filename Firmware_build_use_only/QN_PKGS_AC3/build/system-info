@@ -11,6 +11,14 @@ if [ ! -f "$FILE" ]; then
     touch /mnt/flash/system-info
 fi
 
+PACKET_BUFFER_FILE="/mnt/flash/external/persistent/pkt_buffer"
+
+if [ ! -e "$PACKET_BUFFER_FILE" ] || [ ! -s "$PACKET_BUFFER_FILE" ]; then
+    # File does not exist or is empty
+    # echo "File does not exist or is empty."
+    sh /usr/bin/pkt_buffer
+fi
+
 # Define the first three lines of the format to check
 format_lines="*************************************************
 *********   SWITCH SYSTEM INFORMATION   *********
@@ -57,6 +65,9 @@ if [ ! -f "$FLASH_FILE" ]; then
 else
     FLASH="$(cat /mnt/flash/external/persistent/.flash) MB"
 fi
+
+
+
 
 
 # echo $MODEL_NUMBER
