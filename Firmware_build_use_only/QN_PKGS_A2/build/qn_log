@@ -35,9 +35,9 @@ SR_NO=$(grep '0x1004' "$REGISTRY_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d ' .<>
 # Snmpwalk into Files
 walksnmp() {
     filename="$1"
-    snmpwalk -v2c -c "$commString" "$targetHost" "$OID1" | awk -F "STRING: " '{gsub(/"/,""); print $2}' >"$tempDT"
-    snmpwalk -v2c -c "$commString" "$targetHost" "$OID2" | awk -F "STRING: " '{gsub(/"/,""); print $2}' | awk 'BEGIN { RS="\n\n" } { gsub(/\n\n/," "); print $0 }' >"$tempLOG"
-    snmpwalk -v2c -c "$commString" "$targetHost" "$OID3" | awk -F "STRING: " '{gsub(/"/,""); print $2}' | awk 'BEGIN { RS="\n\n" } { gsub(/\n\n/," "); print $0 }' >"$tempEX"
+    snmpwalk -v2c -c "$commString" -m "" "$targetHost" "$OID1" | awk -F "STRING: " '{gsub(/"/,""); print $2}' >"$tempDT"
+    snmpwalk -v2c -c "$commString" -m "" "$targetHost" "$OID2" | awk -F "STRING: " '{gsub(/"/,""); print $2}' | awk 'BEGIN { RS="\n\n" } { gsub(/\n\n/," "); print $0 }' >"$tempLOG"
+    snmpwalk -v2c -c "$commString" -m "" "$targetHost" "$OID3" | awk -F "STRING: " '{gsub(/"/,""); print $2}' | awk 'BEGIN { RS="\n\n" } { gsub(/\n\n/," "); print $0 }' >"$tempEX"
     awk '{ if ((getline dt < ARGV[2]) > 0 && (getline ex < ARGV[3]) > 0) print $0 dt ex }' "$tempDT" "$tempLOG" "$tempEX" >"$filename"
     cd /tmp/
     rm "$tempDT" "$tempLOG" "$tempEX"

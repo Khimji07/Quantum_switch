@@ -39,12 +39,12 @@ SERIAL_NUMBER=$(grep '0x1004' "$REGISTRY_FILE" 2>/dev/null | cut -d'=' -f2 | tr 
 MAC_ADDRESS=$(grep '0x1005' ${REGISTRY_FILE} 2>/dev/null | cut -d'=' -f2)
 # FIRMWARE_VERSION=$(ls -la /mnt/flash/system/images | grep 'active-image' | awk '{print $NF}' | awk -F'QN_SW-IE-' '{print $2}' | awk -F'.bin' '{print $1}' | head -n 1)
 FIRMWARE_VERSION=$(cat /etc/fw_version)
-PACKET_BUFFER_MEMOMRY=$(cat /mnt/flash/external/persistent/pkt_buffer)
+PACKET_BUFFER_MEMOMRY="$(cat /mnt/flash/external/persistent/pkt_buffer) MB"
 # RAM="$(cat /mnt/flash/external/persistent/.ram) MB"
 # FLASH="$(cat /mnt/flash/external/persistent/.flash) MB"
 RAM_FILE="/mnt/flash/external/persistent/.ram"
 FLASH_FILE="/mnt/flash/external/persistent/.flash"
-ADD_ON_LICENCE="NA"
+ADD_ON_LICENCE=$(cat /mnt/flash/external/persistent/add_on_licence)
 
 if [ ! -f "$RAM_FILE" ]; then
     RAM="512 MB"
