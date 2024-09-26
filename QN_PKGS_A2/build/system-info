@@ -1,0 +1,174 @@
+#!/bin/sh
+
+. /etc/rc.conf
+
+REGISTRY_FILE=/mnt/flash/system/.registry
+
+# Specify the file path
+FILE="/mnt/flash/system-info"
+
+if [ ! -f "$FILE" ]; then
+    touch /mnt/flash/system-info
+fi
+
+PACKET_BUFFER_FILE="/mnt/flash/external/persistent/pkt_buffer"
+
+if [ ! -e "$PACKET_BUFFER_FILE" ] || [ ! -s "$PACKET_BUFFER_FILE" ]; then
+    # File does not exist or is empty
+    # echo "File does not exist or is empty."
+    sh /usr/bin/pkt_buffer
+fi
+
+# Define the first three lines of the format to check
+format_lines="*************************************************
+*********   SWITCH SYSTEM INFORMATION   *********
+*************************************************"
+
+# Convert the format lines to a single line for comparison
+format_check=$(echo "$format_lines" | tr -d '\n' | tr -d ' ')
+
+# Extract the first three lines of the file and convert them to a single line for comparison
+file_first_three_lines=$(head -n 3 /mnt/flash/system-info | tr -d '\n' | tr -d ' ')
+
+# Check if the first three lines of the file match the format lines
+if [[ "$file_first_three_lines" != *"$format_check"* ]]; then
+    # Append the format if it doesn't match
+    printf "%s\n" \
+    "*************************************************" \
+    "*********   SWITCH SYSTEM INFORMATION   *********" \
+    "*************************************************" \
+    "" "" "" "" "" "" "" "" "" "" \
+    "*************************************************" >> $FILE
+fi
+
+
+MODEL_NUMBER=$(rc_get_agent_model_hwrev)
+SERIAL_NUMBER=$(grep '0x1004' "$REGISTRY_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d ' .<>*\\/\t')
+MAC_ADDRESS=$(grep '0x1005' ${REGISTRY_FILE} 2>/dev/null | cut -d'=' -f2)
+# FIRMWARE_VERSION=$(ls -la /mnt/flash/system/images | grep 'active-image' | awk '{print $NF}' | awk -F'QN_SW-IE-' '{print $2}' | awk -F'.bin' '{print $1}' | head -n 1)
+FIRMWARE_VERSION=$(cat /etc/fw_version)
+PACKET_BUFFER_MEMOMRY="$(cat /mnt/flash/external/persistent/pkt_buffer) MB"
+# RAM="$(cat /mnt/flash/external/persistent/.ram) MB"
+# FLASH="$(cat /mnt/flash/external/persistent/.flash) MB"
+RAM_FILE="/mnt/flash/external/persistent/.ram"
+FLASH_FILE="/mnt/flash/external/persistent/.flash"
+ADD_ON_LICENCE=$(cat /mnt/flash/external/persistent/add_on_licence)
+
+if [ ! -f "$RAM_FILE" ]; then
+    RAM="512 MB"
+else
+    RAM="$(cat /mnt/flash/external/persistent/.ram) MB"
+fi
+
+if [ ! -f "$FLASH_FILE" ]; then
+    FLASH="512 MB"
+else
+    FLASH="$(cat /mnt/flash/external/persistent/.flash) MB"
+fi
+
+
+
+
+
+# echo $MODEL_NUMBER
+# echo $SERIAL_NUMBER
+# echo $MAC_ADDRESS
+# echo $FIRMWARE_VERSION
+# echo $PACKET_BUFFER_MEMOMRY
+# echo $RAM
+# echo $FLASH
+# echo $ADD_ON_LICENCE
+
+# Prepare the line to be added or replaced
+MODEL_NEW_LINE="Model Number : $MODEL_NUMBER"
+SR_NEW_LINE="Serial Number : $SERIAL_NUMBER"
+MAC_NEW_LINE="MAC Address : $MAC_ADDRESS"
+FW_NEW_LINE="Switch Firmware Version : $FIRMWARE_VERSION"
+PKT_BFR_NEW_LINE="Packet Buffer Memomry : $PACKET_BUFFER_MEMOMRY"
+RAM_NEW_LINE="Switch RAM : $RAM"
+FLASH_NEW_LINE="Switch Flash : $FLASH"
+LIC_NEW_LINE="Add On Licence : $ADD_ON_LICENCE"
+
+# Check if the line exists and replace it if found, or add it if not
+
+# For Model Number
+if grep -q "^Model Number : " "$FILE"; then
+    # Replace the line if it exists
+    sed -i "s/^Model Number : .*/$MODEL_NEW_LINE/" "$FILE"
+else    
+    # Add the line at line 5 if it doesn't exist
+    # sed -i "5i$MODEL_NEW_LINE" "$FILE"
+    sed -i "5s/.*/$MODEL_NEW_LINE/" "$FILE"
+
+fi
+
+# For Serial Number Address
+if grep -q "^Serial Number : " "$FILE"; then
+    # Replace the line if it exists
+    sed -i "s/^Serial Number : .*/$SR_NEW_LINE/" "$FILE"
+else
+    # Add the line at line 6 if it doesn't exist
+    # sed -i "6i$SR_NEW_LINE" "$FILE"
+    sed -i "6s/.*/$SR_NEW_LINE/" "$FILE"
+fi
+
+# For MAC Address
+if grep -q "^MAC Address : " "$FILE"; then
+    # Replace the line if it exists
+    sed -i "s/^MAC Address : .*/$MAC_NEW_LINE/" "$FILE"
+else
+    # Add the line at line 7 if it doesn't exist
+    # sed -i "7i$MAC_NEW_LINE" "$FILE"
+    sed -i "7s/.*/$MAC_NEW_LINE/" "$FILE"
+
+fi
+
+# For Switch Firmware Version
+if grep -q "^Switch Firmware Version : " "$FILE"; then
+    # Replace the line if it exists
+    sed -i "s/^Switch Firmware Version : .*/$FW_NEW_LINE/" "$FILE"
+else
+    # Add the line at line 7 if it doesn't exist
+    # sed -i "8i$FW_NEW_LINE" "$FILE"
+    sed -i "8s/.*/$FW_NEW_LINE/" "$FILE"
+fi
+
+# For Packet Buffer Memory
+if grep -q "^Packet Buffer Memory : " "$FILE"; then
+    # Replace the line if it exists
+    sed -i "s/^Packet Buffer Memory : .*/$PKT_BFR_NEW_LINE/" "$FILE"
+else
+    # Add the line at line 9 if it doesn't exist
+    # sed -i "9i$PKT_BFR_NEW_LINE" "$FILE"
+    sed -i "9s/.*/$PKT_BFR_NEW_LINE/" "$FILE"
+fi
+
+# For Switch RAM
+if grep -q "^Switch RAM : " "$FILE"; then
+    # Replace the line if it exists
+    sed -i "s/^Switch RAM : .*/$RAM_NEW_LINE/" "$FILE"
+else
+    # Add the line at line 10 if it doesn't exist
+    # sed -i "10i$RAM_NEW_LINE" "$FILE"
+    sed -i "10s/.*/$RAM_NEW_LINE/" "$FILE"
+fi
+
+# For Switch Flash
+if grep -q "^Switch Flash : " "$FILE"; then
+    # Replace the line if it exists
+    sed -i "s/^Switch Flash : .*/$FLASH_NEW_LINE/" "$FILE"
+else
+    # Add the line at line 11 if it doesn't exist
+    # sed -i "11i$FLASH_NEW_LINE" "$FILE"
+    sed -i "11s/.*/$FLASH_NEW_LINE/" "$FILE"
+fi
+
+# For Switch Add On Licence
+if grep -q "^Add On Licence : " "$FILE"; then
+    # Replace the line if it exists
+    sed -i "s/^Add On Licence : .*/$LIC_NEW_LINE/" "$FILE"
+else
+    # Add the line at line 12 if it doesn't exist
+    # sed -i "12i$LIC_NEW_LINE" "$FILE"
+    sed -i "12s/.*/$LIC_NEW_LINE/" "$FILE"
+fi

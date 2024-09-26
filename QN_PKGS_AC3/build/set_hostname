@@ -1,0 +1,42 @@
+#!/bin/sh
+
+# Wait for ping
+IP="203.0.113.121"
+while ! ping -c 1 -W 1 "$IP" >/dev/null; do
+    sleep 2
+done
+
+HOSTNAME=$(snmpwalk -v2c -c qnpublic -m "" $IP SNMPv2-MIB::sysName.0 | awk '{gsub(/"/,""); print $4}')
+
+if [ "$HOSTNAME" != "console" ]; then
+    exit
+fi
+
+while [ ! -S "/var/run/miyagi.sock" ]; do
+    sleep 2
+done
+
+# Initializations
+. /etc/runit/functions
+logfile="/var/log/genral/current"
+REGISTRY_FILE="/mnt/flash/system/.registry"
+MAC=$(grep '0x1005' "$REGISTRY_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d ' .<>*\\/\t' | awk -F':' '{print $4 $5 $6}')
+PAYLOAD="{\"method\":\"call\",\"params\":{\"uid\":\"snmp_set\",\"arg\":{\"oid\":[{\"name\":\"SNMPv2-MIB::sysName.0\",\"type\":\"STRING\",\"value\":\"QN-${MAC}\"}]}},\"id\":1}"
+RUNNING=true
+
+
+ping -c 1 -W 5 $IP > /dev/null
+PING_EXIT_STATUS=$?
+EXPECTED_EXIT_STATUS=0
+# Check if hostname is "console"
+if [ "$PING_EXIT_STATUS" -eq "$EXPECTED_EXIT_STATUS" ]; then
+    if [ "$HOSTNAME" = "console" ]; then
+        echo "$PAYLOAD" | socat - UNIX-CONNECT:/var/run/miyagi.sock > /dev/null
+        NEW_HOSTNAME=$(snmpwalk -v2c -c qnpublic -m ""  $IP SNMPv2-MIB::sysName.0 | awk '{gsub(/"/,""); print $4}')
+        msg "$(date +'%Y-%m-%d_%H:%M:%S') HOSTNAME ${NEW_HOSTNAME} configured Succesfully" >> $logfile
+        exit
+    else
+        msg "$(date +'%Y-%m-%d_%H:%M:%S') HOSTNAME ${HOSTNAME} already configured" >> $logfile
+        exit
+    fi
+fi
