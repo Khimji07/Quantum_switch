@@ -156,7 +156,7 @@ int main() {
 
     int ram_value, flash_value, pkt_buffer;
     char license[256];
-    char command[512];
+    char command[1024];
     
     // Prompt user to input RAM and Flash values
     printf("Enter the RAM value (ex: 1024): ");
@@ -180,11 +180,12 @@ int main() {
     // sprintf(command, "echo %d > /mnt/flash/external/persistent/.ram && echo %d > /mnt/flash/external/persistent/.flash && echo %d > /mnt/flash/external/persistent/pkt_buffer && sh /usr/bin/system-info", ram_value, flash_value, pkt_buffer);
 
     sprintf(command, 
-        "echo %d > /mnt/flash/external/persistent/.ram && "
-        "echo %d > /mnt/flash/external/persistent/.flash && "
-        "echo %d > /mnt/flash/external/persistent/pkt_buffer && "
-        "echo \"%s\" > /mnt/flash/external/persistent/add_on_licence && "
-        "sh /usr/bin/system-info", 
+        "mkdir -p /mnt/flash/external/persistent && sleep 1 && "
+        "echo %d > /mnt/flash/external/persistent/.ram && sleep 1 && "
+        "echo %d > /mnt/flash/external/persistent/.flash && sleep 1 && "
+        "echo %d > /mnt/flash/external/persistent/pkt_buffer && sleep 1 && "
+        "echo \"%s\" > /mnt/flash/external/persistent/add_on_licence && sleep 1 && "
+        "sh /usr/bin/system-info && sleep 1", 
         ram_value, flash_value, pkt_buffer, license);
 
 
