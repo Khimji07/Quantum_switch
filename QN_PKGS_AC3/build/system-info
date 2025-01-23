@@ -6,6 +6,8 @@ REGISTRY_FILE=/mnt/flash/system/.registry
 
 # Specify the file path
 FILE="/mnt/flash/system-info"
+JSON_FILE="/mnt/flash/external/persistent/system-info.json"
+
 
 if [ ! -f "$FILE" ]; then
     touch /mnt/flash/system-info
@@ -47,7 +49,7 @@ SERIAL_NUMBER=$(grep '0x1004' "$REGISTRY_FILE" 2>/dev/null | cut -d'=' -f2 | tr 
 MAC_ADDRESS=$(grep '0x1005' ${REGISTRY_FILE} 2>/dev/null | cut -d'=' -f2)
 # FIRMWARE_VERSION=$(ls -la /mnt/flash/system/images | grep 'active-image' | awk '{print $NF}' | awk -F'QN_SW-IE-' '{print $2}' | awk -F'.bin' '{print $1}' | head -n 1)
 FIRMWARE_VERSION=$(cat /etc/fw_version)
-PACKET_BUFFER_MEMOMRY="$(cat /mnt/flash/external/persistent/pkt_buffer) MB"
+PACKET_BUFFER_MEMORY="$(cat /mnt/flash/external/persistent/pkt_buffer) MB"
 # RAM="$(cat /mnt/flash/external/persistent/.ram) MB"
 # FLASH="$(cat /mnt/flash/external/persistent/.flash) MB"
 RAM_FILE="/mnt/flash/external/persistent/.ram"
@@ -66,15 +68,11 @@ else
     FLASH="$(cat /mnt/flash/external/persistent/.flash) MB"
 fi
 
-
-
-
-
 # echo $MODEL_NUMBER
 # echo $SERIAL_NUMBER
 # echo $MAC_ADDRESS
 # echo $FIRMWARE_VERSION
-# echo $PACKET_BUFFER_MEMOMRY
+# echo $PACKET_BUFFER_MEMMRY
 # echo $RAM
 # echo $FLASH
 # echo $ADD_ON_LICENCE
@@ -84,7 +82,7 @@ MODEL_NEW_LINE="Model Number : $MODEL_NUMBER"
 SR_NEW_LINE="Serial Number : $SERIAL_NUMBER"
 MAC_NEW_LINE="MAC Address : $MAC_ADDRESS"
 FW_NEW_LINE="Switch Firmware Version : $FIRMWARE_VERSION"
-PKT_BFR_NEW_LINE="Packet Buffer Memomry : $PACKET_BUFFER_MEMOMRY"
+PKT_BFR_NEW_LINE="Packet Buffer Memory : $PACKET_BUFFER_MEMORY"
 RAM_NEW_LINE="Switch RAM : $RAM"
 FLASH_NEW_LINE="Switch Flash : $FLASH"
 LIC_NEW_LINE="Add On Licence : $ADD_ON_LICENCE"
@@ -172,3 +170,34 @@ else
     # sed -i "12i$LIC_NEW_LINE" "$FILE"
     sed -i "12s/.*/$LIC_NEW_LINE/" "$FILE"
 fi
+
+
+# Extract key-value pairs from system-info
+parse_system_info() {
+  awk '
+    BEGIN {
+      # Initialize JSON string
+      printf "{\n"
+      first = 1  # Flag to handle commas
+    }
+    /^Model Number : |^Serial Number : |^MAC Address : |^Switch Firmware Version : |^Packet Buffer Memory : |^Switch RAM : |^Switch Flash : |^Add On Licence : / {
+      # Remove leading/trailing whitespace and split into key-value
+      gsub(/^[ \t]+|[ \t]+$/, "", $0)
+      split($0, arr, " : ")
+      key = arr[1]
+      value = arr[2]
+      
+      # JSON formatting
+      if (!first) printf ",\n"
+      printf "  \"%s\": \"%s\"", key, value
+      first = 0
+    }
+    END {
+      printf "\n}\n"  # Close JSON
+    }
+  ' "$FILE"
+}
+
+# Generate JSON file
+parse_system_info > "$JSON_FILE"
+
