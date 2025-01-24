@@ -44,7 +44,8 @@ if [[ "$file_first_three_lines" != *"$format_check"* ]]; then
 fi
 
 
-MODEL_NUMBER=$(rc_get_agent_model_hwrev)
+ORIGINAL_MODEL_NUMBER=$(rc_get_agent_model_hwrev)
+MODEL_NUMBER=$(echo "$ORIGINAL_MODEL_NUMBER" | cut -d '-' -f1-4)
 SERIAL_NUMBER=$(grep '0x1004' "$REGISTRY_FILE" 2>/dev/null | cut -d'=' -f2 | tr -d ' .<>*\\/\t')
 MAC_ADDRESS=$(grep '0x1005' ${REGISTRY_FILE} 2>/dev/null | cut -d'=' -f2)
 # FIRMWARE_VERSION=$(ls -la /mnt/flash/system/images | grep 'active-image' | awk '{print $NF}' | awk -F'QN_SW-IE-' '{print $2}' | awk -F'.bin' '{print $1}' | head -n 1)
@@ -200,4 +201,3 @@ parse_system_info() {
 
 # Generate JSON file
 parse_system_info > "$JSON_FILE"
-
